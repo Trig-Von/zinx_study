@@ -3,6 +3,7 @@ package znet
 import (
 	"fmt"
 	"net"
+	"zinx/config"
 	"zinx/ziface"
 )
 
@@ -32,10 +33,10 @@ func CallBackBusi(r ziface.IRequest)error{
 //初始化new方法
 func NewServer (name string) ziface.IServer  {
 	s := &Server{
-		Name:name,
+		Name:config.GlobalObject.Name,
 		IPVersoin:"tcp4",
-		IP:"0.0.0.0",
-		Port:8999,
+		IP:config.GlobalObject.Host,
+		Port:config.GlobalObject.Port,
 		Router:nil,
 	}
 	return  s

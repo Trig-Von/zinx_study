@@ -3,6 +3,7 @@ package znet
 import (
 	"fmt"
 	"net"
+	"zinx/config"
 	"zinx/ziface"
 )
 
@@ -40,7 +41,7 @@ func (c *Connection) StartReader()  {
 	defer c.Stop()
 
 	for  {
-		buf := make([]byte,512)
+		buf := make([]byte,config.GlobalObject.MaxPackageSize)
 		cnt,err := c.Conn.Read(buf)
 		if err != nil {
 			fmt.Println("recv buf err",err)
