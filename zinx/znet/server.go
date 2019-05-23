@@ -1,4 +1,4 @@
-package net
+package znet
 
 import (
 	"fmt"
@@ -11,7 +11,24 @@ type Server struct {
 	IP string
 	Port int
 	Name string
+
+	//路由属性
+	Router ziface.IRouter
 }
+//定义一个具体的回显业务 针对type HandleFunc
+func CallBackBusi(r ziface.IRequest)error{
+	//回显业务
+	fmt.Println("【conn Handle】 CallBack..")
+	c := r.GetConnection().GetTCPConnection()
+	buf :=r.GetData()
+	cnt := r.GetDataLen()
+	if _,err := c.Write(buf[:cnt]);err != nil {
+		fmt.Println("Write back err",err)
+		return err
+	}
+	return  nil
+}
+
 //初始化new方法
 func NewServer (name string) ziface.IServer  {
 	s := &Server{
@@ -19,6 +36,7 @@ func NewServer (name string) ziface.IServer  {
 		IPVersoin:"tcp4",
 		IP:"0.0.0.0",
 		Port:8999,
+		Router:nil,
 	}
 	return  s
 }
@@ -38,16 +56,28 @@ func (s *Server)Start()  {
 		fmt.Println("listen",s.IPVersoin,"err,",err)
 		return
 	}
+
+	var cid uint32
+	cid = 0
 	//阻塞等待客户端发送请求
 	go func() {
 		for  {
 			//阻塞等待客户端请求
-			conn,err := listener.Accept()
+			conn,err := listener.AcceptTCP()
 			if err !=nil{
 				fmt.Println("Accept err :",err)
 				continue
 			}
-			//此时conn已经与对端客户端连接
+
+			//创建一个Connection对象
+			dealConn := NewConnection(conn,cid,s.Router )
+			cid++
+
+			//此时conn就已经和对端客户端连接
+			go dealConn.Start()
+
+
+			/*//此时conn已经与对端客户端连接
 			go func() {
 				//客户端有数据请求，处理客户端业务（读、写）
 				for  {
@@ -64,7 +94,7 @@ func (s *Server)Start()  {
 						continue
 					}
 				}
-			}()
+			}()*/
 		}
 	}()
 }
@@ -81,4 +111,7 @@ func (s *Server)Serve()  {
 	select {}
 }
 
+func (s *Server)AddRouter(router ziface.IRouter)  {
+	s.Router = router
+}
 
