@@ -1,5 +1,5 @@
 /**
- zinx v0.1 应用
+ zinx v0.3 应用
 */
 package main
 

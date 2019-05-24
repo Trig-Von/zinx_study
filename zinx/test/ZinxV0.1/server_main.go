@@ -1,8 +1,4 @@
-/**
-* @Author: Aceld(刘丹冰)
-* @Date: 2019/5/22 12:16
-* @Mail: danbing.at@gmail.com
-*/
+
 package main
 
 import "zinx/znet"

@@ -1,5 +1,5 @@
 /**
- zinx v0.1 应用
+ zinx v0.2 应用
 */
 package main
 
@@ -9,7 +9,7 @@ import (
 
 func main() {
 	//创建一个zinx server对象
-	s := znet.NewServer("zinx v0.1")
+	s := znet.NewServer("zinx v0.2")
 
 	//注册一些自定义的业务
 	//s.AddRouter(1, &dsad)
