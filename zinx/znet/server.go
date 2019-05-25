@@ -13,22 +13,9 @@ type Server struct {
 	Port int
 	Name string
 
-	//路由属性
-	Router ziface.IRouter
+	MsgHandler ziface.IMsgHandler
 }
-//定义一个具体的回显业务 针对type HandleFunc
-/*func CallBackBusi(r ziface.IRequest)error{
-	//回显业务
-	fmt.Println("【conn Handle】 CallBack..")
-	c := r.GetConnection().GetTCPConnection()
-	buf :=r.GetData()
-	cnt := r.GetDataLen()
-	if _,err := c.Write(buf[:cnt]);err != nil {
-		fmt.Println("Write back err",err)
-		return err
-	}
-	return  nil
-}*/
+
 
 //初始化new方法
 func NewServer (name string) ziface.IServer  {
@@ -37,7 +24,7 @@ func NewServer (name string) ziface.IServer  {
 		IPVersoin:"tcp4",
 		IP:config.GlobalObject.Host,
 		Port:config.GlobalObject.Port,
-		Router:nil,
+		MsgHandler:NewMsgHandler(),
 	}
 	return  s
 }
@@ -71,31 +58,11 @@ func (s *Server)Start()  {
 			}
 
 			//创建一个Connection对象
-			dealConn := NewConnection(conn,cid,s.Router )
+			dealConn := NewConnection(conn,cid, s.MsgHandler)
 			cid++
 
 			//此时conn就已经和对端客户端连接
 			go dealConn.Start()
-
-
-			/*//此时conn已经与对端客户端连接
-			go func() {
-				//客户端有数据请求，处理客户端业务（读、写）
-				for  {
-					buf := make([]byte,512)
-					cnt,err := conn.Read(buf)
-					if err != nil {
-						fmt.Println("recv buf err ",err)
-						break
-					}
-					fmt.Printf("recv cllient buf %s,cnt :%d\n",buf,cnt)
-					//回显功能
-					if _,err := conn.Write(buf[:cnt]);err != nil {
-						fmt.Println("write back buf err :",err)
-						continue
-					}
-				}
-			}()*/
 		}
 	}()
 }
@@ -112,7 +79,8 @@ func (s *Server)Serve()  {
 	select {}
 }
 
-func (s *Server)AddRouter(router ziface.IRouter)  {
-	s.Router = router
+func (s *Server)AddRouter(msgID uint32,router ziface.IRouter)  {
+	s.MsgHandler.AddRouter(msgID,router)
+	fmt.Println("Add Router Succ!!!msgID = ",msgID)
 }
 
