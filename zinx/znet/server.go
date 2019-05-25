@@ -17,7 +17,7 @@ type Server struct {
 	Router ziface.IRouter
 }
 //定义一个具体的回显业务 针对type HandleFunc
-func CallBackBusi(r ziface.IRequest)error{
+/*func CallBackBusi(r ziface.IRequest)error{
 	//回显业务
 	fmt.Println("【conn Handle】 CallBack..")
 	c := r.GetConnection().GetTCPConnection()
@@ -28,7 +28,7 @@ func CallBackBusi(r ziface.IRequest)error{
 		return err
 	}
 	return  nil
-}
+}*/
 
 //初始化new方法
 func NewServer (name string) ziface.IServer  {

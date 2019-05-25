@@ -7,8 +7,6 @@ package ziface
 type IRequest interface {
 	//得到请求连接
 	GetConnection() IConnection
-	//得到连接数据
-	GetData() []byte
-	//得到连接长度
-	GetDataLen() int
+	//得到请求的消息
+	GetMsg() IMessage
 }

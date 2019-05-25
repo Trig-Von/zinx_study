@@ -1,9 +1,10 @@
 package znet
 
 import (
+	"errors"
 	"fmt"
+	"io"
 	"net"
-	"zinx/config"
 	"zinx/ziface"
 )
 
@@ -41,14 +42,42 @@ func (c *Connection) StartReader()  {
 	defer c.Stop()
 
 	for  {
-		buf := make([]byte,config.GlobalObject.MaxPackageSize)
+		/*buf := make([]byte,config.GlobalObject.MaxPackageSize)
 		cnt,err := c.Conn.Read(buf)
 		if err != nil {
 			fmt.Println("recv buf err",err)
 			continue
-		}
+		}*/
 		//将当前一次性得到的对端客户端请求的数据 封装成一个Request
-		req := NewRequst(c,buf,cnt)
+		//创建拆包封包的对象
+		dp := NewDataPack()
+
+		//读取客户端消息的头部
+		headData := make([]byte,dp.GetHeadLen())
+		if _,err := io.ReadFull(c.Conn,headData);err!= nil {
+			fmt.Println("read msg head error",err)
+			break
+		}
+		//根据头部,获取数据的长度，进行第二次读取
+		msg,err := dp.UnPack(headData)
+		if err !=nil {
+			fmt.Println("unpack error",err)
+			return
+		}
+		//根据长度再次读取
+		var data []byte
+		if msg.GetMsgLen()>0 {
+			//有内容
+			data = make([]byte,msg.GetMsgLen())
+			if _,err := io.ReadFull(c.Conn,data);err!= nil {
+				fmt.Println("read msg data error",err)
+				break
+			}
+		}
+		msg.SetData(data)
+		//将读出来的msg 组装一个request
+		//将当前一次性得到的对端客户端请求的数据 封装成一个request
+		req := NewRequst(c,msg)
 
 		//调用用户传递进来业务 模块 设计模式
 		go func() {
@@ -56,13 +85,7 @@ func (c *Connection) StartReader()  {
 			c.Router.Handle(req)
 			c.Router.PostHandle(req)
 		}()
-		/*
-		//将数据传递给定义好的handle CallBack方法
-		if err := c.handleAPI(req); err!= nil {
-			fmt.Println("ConnId",c.ConnID,"Handle is err",err)
-			break
-		}
-		*/
+
 	}
 }
 
@@ -98,8 +121,20 @@ func (c *Connection)GetRemoteAddr() net.Addr{
 	return c.Conn.RemoteAddr()
 }
 //发送数据给对方客户端
-func (c *Connection)Send(data []byte,cnt int) error{
-	if _,err := c.Conn.Write(data[:cnt]); err != nil{
+func (c *Connection)Send(msgId uint32,msgData []byte) error{
+	if c.isClosed == true {
+		return errors.New("Connection closed ..send Msg")
+	}
+	//封装成msg
+	dp := NewDataPack()
+	binaryMsg,err:= dp.Pack(NewMsgPackage(msgId,msgData))
+	if err != nil {
+		fmt.Println("Pack error msg id = ",msgId)
+		return err
+	}
+	//将binaryMsg发送给客户端
+
+	if _,err := c.Conn.Write(binaryMsg); err != nil{
 		fmt.Println("send buf err")
 		return err
 	}

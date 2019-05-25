@@ -10,7 +10,7 @@ type GlobalObj struct {
 	Port int	//当前监听Port
 	Name string	//当前Zinxserver名称
 
-	Version string	//当前矿建版本号
+	Version string	//当前框架版本号
 	MaxPackageSize uint32	//每次Read一次的最大长度
 }
 
@@ -19,7 +19,7 @@ var GlobalObject *GlobalObj
 
 //添加一个加载配置文件的方法
 func (g *GlobalObj)LoadConfig()  {
-	data,err := ioutil.ReadFile("conf/zinx.json")	//针对main主进行的所在路径的相对路径
+	data,err := ioutil.ReadFile("conf/zinx.json")	//针对main主进程的所在路径的相对路径
 	if err != nil {
 		panic(err)
 	}
