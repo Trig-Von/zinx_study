@@ -19,6 +19,12 @@ type Connection struct {
 
 	//多路由
 	MsgHandler ziface.IMsgHandler
+
+	//添加一个 Reader和Writer通信的channel
+	msgChan chan []byte
+
+	//创建一个Channel 用来Reader通知Writer conn已经关闭 需要退出的消息
+	writerExitChan chan bool
 }
 //初始化连接方法
 func NewConnection(conn *net.TCPConn,connID uint32,handler ziface.IMsgHandler)ziface.IConnection  {
@@ -28,6 +34,8 @@ func NewConnection(conn *net.TCPConn,connID uint32,handler ziface.IMsgHandler)zi
 		//handleAPI:callback_api,
 		MsgHandler:handler,
 		isClosed:false,
+		msgChan:make(chan []byte),
+		writerExitChan:make(chan bool),
 	}
 	return  c
 }
@@ -35,8 +43,8 @@ func NewConnection(conn *net.TCPConn,connID uint32,handler ziface.IMsgHandler)zi
 //针对链接读业务的方法
 func (c *Connection) StartReader()  {
 	//从对端读数据
-	fmt.Println("Reader go i starting..")
-	defer fmt.Println("connId = ",c.ConnID,"Reader i exit ,remote addr is ",c.GetRemoteAddr().String())
+	fmt.Println("Reader go is starting..")
+	defer fmt.Println("connId = ",c.ConnID,"Reader is exit ,remote addr is ",c.GetRemoteAddr().String())
 	defer c.Stop()
 
 	for  {
@@ -52,8 +60,9 @@ func (c *Connection) StartReader()  {
 
 		//读取客户端消息的头部
 		headData := make([]byte,dp.GetHeadLen())
-		if _,err := io.ReadFull(c.Conn,headData);err!= nil {
+		if cnt,err := io.ReadFull(c.Conn,headData);err!= nil {
 			fmt.Println("read msg head error",err)
+			fmt.Println(cnt)
 			break
 		}
 		//根据头部,获取数据的长度，进行第二次读取
@@ -84,11 +93,36 @@ func (c *Connection) StartReader()  {
 }
 
 
+/*
+写消息的goroutine 专门给客户端发消息
+*/
+func (c *Connection)StartWriter() {
+	fmt.Println("[Writer goroutine is starting]...")
+	defer fmt.Println("[Writer Goroutine Stop]...")
+	//IO多路复用
+	for  {
+		select {
+		case data := <-c.msgChan:
+			//有数据写给客户端
+			if _,err := c.Conn.Write(data);err != nil {
+				fmt.Println("Send data err ",err )
+				return
+			}
+		case <-c.writerExitChan:
+			//代表reader已经退出了 writer也要推出
+			return
+
+		}
+	}
+}
+
 //启动连接
 func (c *Connection)Start(){
 fmt.Println("Conn Start() ...id= ",c.ConnID)
 
 go c.StartReader()
+
+go c.StartWriter()
 
 }
 //停止连接
@@ -99,7 +133,17 @@ fmt.Println("c.Stop() ...ConnId=",c.ConnID)
 		return
 	}
 	c.isClosed=true
+
+	//告知writer 连接已近关闭
+	c.writerExitChan<- true
+
+	//关闭原生套接字
 	_ = c.Conn.Close()
+
+	//释放channel资源
+	close(c.msgChan)
+
+	close(c.writerExitChan)
 
 }
 //获取链接ID
@@ -132,5 +176,7 @@ func (c *Connection)Send(msgId uint32,msgData []byte) error{
 		fmt.Println("send buf err")
 		return err
 	}
+	//将套发送的打包好的二进制数发送给channel 让writer去读
+	c.msgChan <- binaryMsg
 	return nil
 }
