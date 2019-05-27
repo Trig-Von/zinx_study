@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"net"
+	"zinx/config"
 	"zinx/ziface"
 )
 
@@ -86,8 +87,12 @@ func (c *Connection) StartReader()  {
 		//将当前一次性得到的对端客户端请求的数据 封装成一个request
 		req := NewRequst(c,msg)
 
-		//调用用户传递进来业务 模块 设计模式
-		go  c.MsgHandler.DoMsgHandler(req)
+		//将req交给worker工作池来处理
+		if config.GlobalObject.WorkerPoolSize > 0 {
+			c.MsgHandler.SendMsgToTaskQueue(req)
+		}else {
+			go c.MsgHandler.DoMsgHandler(req)
+		}
 
 	}
 }

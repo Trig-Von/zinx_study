@@ -12,6 +12,9 @@ type GlobalObj struct {
 
 	Version string	//当前框架版本号
 	MaxPackageSize uint32	//每次Read一次的最大长度
+	WorkerPoolSize uint32
+	MaxWorkerTaskLen uint32
+	MaxConn  uint32
 }
 
 //定义一个全局的对外的配置的对象
@@ -41,6 +44,9 @@ func init()  {
 		Port:8999,
 		Version:"V0.4",
 		MaxPackageSize:512,
+		WorkerPoolSize:10,
+		MaxWorkerTaskLen:4096,
+		MaxConn:1000,
 	}
 
 	//加载文件
